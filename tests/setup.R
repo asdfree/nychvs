@@ -11,7 +11,7 @@ nychvs_cat <-
 # 2014 only
 nychvs_cat <- subset( nychvs_cat , year == 2014 )
 # download the microdata to your local computer
-lodown( "nychvs" , nychvs_cat )
+
 
 options( survey.lonely.psu = "adjust" )
 

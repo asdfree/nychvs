@@ -14,13 +14,19 @@ nychvs_csv_import <-
 		
 		this_df
 	}
-all_units_df <- nychvs_csv_import( "https://www2.census.gov/programs-surveys/nychvs/datasets/2021/microdata/allunits_puf_21.csv" )
+datasets_url <- "https://www2.census.gov/programs-surveys/nychvs/datasets/"
 
-occupied_units_df <- nychvs_csv_import( "https://www2.census.gov/programs-surveys/nychvs/datasets/2021/microdata/occupied_puf_21.csv" )
+all_units_df <-
+	nychvs_csv_import( paste0( datasets_url , "2021/microdata/allunits_puf_21.csv" ) )
 
-person_df <- nychvs_csv_import( "https://www2.census.gov/programs-surveys/nychvs/datasets/2021/microdata/person_puf_21.csv" )
+occupied_units_df <-
+	nychvs_csv_import( paste0( datasets_url , "/2021/microdata/occupied_puf_21.csv" ) )
 
-vacant_units_df <- nychvs_csv_import( "https://www2.census.gov/programs-surveys/nychvs/datasets/2021/microdata/vacant_puf_21.csv" )
+person_df <-
+	nychvs_csv_import( paste0( datasets_url , "2021/microdata/person_puf_21.csv" ) )
+
+vacant_units_df <-
+	nychvs_csv_import( paste0( datasets_url , "/2021/microdata/vacant_puf_21.csv" ) )
 
 stopifnot( nrow( all_units_df ) == nrow( occupied_units_df ) + nrow( vacant_units_df ) )
 before_nrow <- nrow( occupied_units_df )

@@ -210,7 +210,9 @@ glm_result <-
 	)
 
 summary( glm_result )
-svytotal( ~ one , nychvs_design )
+result <- svytotal( ~ one , nychvs_design )
+stopifnot( round( coef( result ) , 0 ) == 3157105 )
+stopifnot( round( SE( result ) , 0 ) == 13439 )
 library(srvyr)
 nychvs_srvyr_design <- as_survey( nychvs_design )
 nychvs_srvyr_design %>%

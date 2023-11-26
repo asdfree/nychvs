@@ -124,7 +124,13 @@ nychvs_design <-
 				'Queens' , 'Staten Island' )
 			) ,
 			
-		food_insecurity = factor( foodinsecure , levels = 1:3 , labels = c( 'not insecure' , 'insecure' , 'very insecure' ) )
+		food_insecurity = 
+			factor( 
+				foodinsecure , 
+				levels = 1:3 , 
+				labels = 
+					c( 'not insecure' , 'insecure' , 'very insecure' )
+			)
 			
 	)
 sum( weights( nychvs_design , "sampling" ) != 0 )

@@ -45,11 +45,16 @@ before_nrow <- nrow( person_df )
 
 weighting_variables <- grep( "^fw([0-9]+)?$" , names( occupied_units_df ) , value = TRUE )
 
-person_df <- merge( occupied_units_df[ setdiff( names( occupied_units_df ) , weighting_variables ) ] , person_df )
+person_df <-
+	merge(
+		occupied_units_df[ setdiff( names( occupied_units_df ) , weighting_variables ) ] ,
+		person_df
+	)
 
 stopifnot( nrow( person_df ) == before_nrow )
 
-all_units_df[ , 'one' ] <- occupied_units_df[ , 'one' ] <- vacant_units_df[ , 'one' ] <- person_df[ , 'one' ] <- 1
+all_units_df[ , 'one' ] <- occupied_units_df[ , 'one' ] <-
+	vacant_units_df[ , 'one' ] <- person_df[ , 'one' ] <- 1
 # nychvs_fn <- file.path( path.expand( "~" ) , "NYCHVS" , "this_file.rds" )
 # saveRDS( nychvs_df , file = nychvs_fn , compress = FALSE )
 # nychvs_df <- readRDS( nychvs_fn )
@@ -131,15 +136,15 @@ svyby( ~ one , ~ borough , nychvs_design , svytotal )
 svymean( ~ hhinc_rec1 , nychvs_design , na.rm = TRUE )
 
 svyby( ~ hhinc_rec1 , ~ borough , nychvs_design , svymean , na.rm = TRUE )
-svymean( ~ food_insecurity , nychvs_design )
+svymean( ~ food_insecurity , nychvs_design , na.rm = TRUE )
 
-svyby( ~ food_insecurity , ~ borough , nychvs_design , svymean )
+svyby( ~ food_insecurity , ~ borough , nychvs_design , svymean , na.rm = TRUE )
 svytotal( ~ hhinc_rec1 , nychvs_design , na.rm = TRUE )
 
 svyby( ~ hhinc_rec1 , ~ borough , nychvs_design , svytotal , na.rm = TRUE )
-svytotal( ~ food_insecurity , nychvs_design )
+svytotal( ~ food_insecurity , nychvs_design , na.rm = TRUE )
 
-svyby( ~ food_insecurity , ~ borough , nychvs_design , svytotal )
+svyby( ~ food_insecurity , ~ borough , nychvs_design , svytotal , na.rm = TRUE )
 svyquantile( ~ hhinc_rec1 , nychvs_design , 0.5 , na.rm = TRUE )
 
 svyby( 
@@ -156,7 +161,7 @@ svyratio(
 	nychvs_design ,
 	na.rm = TRUE
 )
-sub_nychvs_design <- subset( nychvs_design , boro == 3 )
+sub_nychvs_design <- subset( nychvs_design , rentburden_cat %in% 1:2 )
 svymean( ~ hhinc_rec1 , sub_nychvs_design , na.rm = TRUE )
 this_result <- svymean( ~ hhinc_rec1 , nychvs_design , na.rm = TRUE )
 

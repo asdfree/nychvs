@@ -41,15 +41,21 @@ vacant_units_df <- merge( all_units_df , vacant_units_df )
 
 stopifnot( nrow( vacant_units_df ) == before_nrow )
 
-stopifnot( nrow( nychvs_df ) == nrow( nychvs_df_person ) )
+before_nrow <- nrow( person_df )
 
-nychvs_df[ , 'one' ] <- 1
+weighting_variables <- grep( "^fw([0-9]+)?$" , names( occupied_units_df ) , value = TRUE )
+
+person_df <- merge( occupied_units_df[ setdiff( names( occupied_units_df ) , weighting_variables ) ] , person_df )
+
+stopifnot( nrow( person_df ) == before_nrow )
+
+all_units_df[ , 'one' ] <- occupied_units_df[ , 'one' ] <- vacant_units_df[ , 'one' ] <- person_df[ , 'one' ] <- 1
 # nychvs_fn <- file.path( path.expand( "~" ) , "NYCHVS" , "this_file.rds" )
 # saveRDS( nychvs_df , file = nychvs_fn , compress = FALSE )
 # nychvs_df <- readRDS( nychvs_fn )
 library(survey)
 
-nychvs_design <-
+all_units_design <-
 	svrepdesign(
 		weight = ~fw ,
 		repweights = 'fw[0-9]+' ,
@@ -57,19 +63,55 @@ nychvs_design <-
 		rscales = rep( 1 , 80 ) ,
 		mse = TRUE ,
 		type = 'JK1' ,
-		data = nychvs_df
+		data = all_units_df
 	)
+	
+occupied_units_design <-
+	svrepdesign(
+		weight = ~fw ,
+		repweights = 'fw[0-9]+' ,
+		scale = 4 / 80 ,
+		rscales = rep( 1 , 80 ) ,
+		mse = TRUE ,
+		type = 'JK1' ,
+		data = occupied_units_df
+	)
+	
+vacant_units_design <-
+	svrepdesign(
+		weight = ~fw ,
+		repweights = 'fw[0-9]+' ,
+		scale = 4 / 80 ,
+		rscales = rep( 1 , 80 ) ,
+		mse = TRUE ,
+		type = 'JK1' ,
+		data = vacant_units_df
+	)
+	
+person_design <-
+	svrepdesign(
+		weight = ~pw ,
+		repweights = 'pw[0-9]+' ,
+		scale = 4 / 80 ,
+		rscales = rep( 1 , 80 ) ,
+		mse = TRUE ,
+		type = 'JK1' ,
+		data = person_df
+	)
+
+nychvs_design <-
+	occupied_units_design
 nychvs_design <- 
 	update( 
 		nychvs_design , 
 		
 		one = 1 ,
 		
-		home_owners = as.numeric( sc115 == 1 ) ,
+		home_owners = as.numeric( tenure == 2 ) ,
 
-		yearly_household_income = ifelse( uf42 == 9999999 , 0 , as.numeric( uf42 ) ) ,
+		yearly_household_income = hhinc_rec1 ,
 		
-		gross_monthly_rent = ifelse( uf17 == 99999 , NA , as.numeric( uf17 ) ) ,
+		rent_amount = ifelse( rent_amount == -2 , NA , rent_amount ) ,
 		
 		borough =
 			factor( boro , levels = 1:5 , labels =
@@ -77,7 +119,7 @@ nychvs_design <-
 				'Queens' , 'Staten Island' )
 			) ,
 			
-		householder_sex = factor( hhr2 , labels = c( 'male' , 'female' ) )
+		food_insecurity = factor( foodinsecure , levels = 1:3 , labels = c( 'not insecure' , 'insecure' , 'very insecure' ) )
 			
 	)
 sum( weights( nychvs_design , "sampling" ) != 0 )
@@ -86,22 +128,22 @@ svyby( ~ one , ~ borough , nychvs_design , unwtd.count )
 svytotal( ~ one , nychvs_design )
 
 svyby( ~ one , ~ borough , nychvs_design , svytotal )
-svymean( ~ yearly_household_income , nychvs_design , na.rm = TRUE )
+svymean( ~ hhinc_rec1 , nychvs_design , na.rm = TRUE )
 
-svyby( ~ yearly_household_income , ~ borough , nychvs_design , svymean , na.rm = TRUE )
-svymean( ~ householder_sex , nychvs_design )
+svyby( ~ hhinc_rec1 , ~ borough , nychvs_design , svymean , na.rm = TRUE )
+svymean( ~ food_insecurity , nychvs_design )
 
-svyby( ~ householder_sex , ~ borough , nychvs_design , svymean )
-svytotal( ~ yearly_household_income , nychvs_design , na.rm = TRUE )
+svyby( ~ food_insecurity , ~ borough , nychvs_design , svymean )
+svytotal( ~ hhinc_rec1 , nychvs_design , na.rm = TRUE )
 
-svyby( ~ yearly_household_income , ~ borough , nychvs_design , svytotal , na.rm = TRUE )
-svytotal( ~ householder_sex , nychvs_design )
+svyby( ~ hhinc_rec1 , ~ borough , nychvs_design , svytotal , na.rm = TRUE )
+svytotal( ~ food_insecurity , nychvs_design )
 
-svyby( ~ householder_sex , ~ borough , nychvs_design , svytotal )
-svyquantile( ~ yearly_household_income , nychvs_design , 0.5 , na.rm = TRUE )
+svyby( ~ food_insecurity , ~ borough , nychvs_design , svytotal )
+svyquantile( ~ hhinc_rec1 , nychvs_design , 0.5 , na.rm = TRUE )
 
 svyby( 
-	~ yearly_household_income , 
+	~ hhinc_rec1 , 
 	~ borough , 
 	nychvs_design , 
 	svyquantile , 
@@ -109,14 +151,14 @@ svyby(
 	ci = TRUE , na.rm = TRUE
 )
 svyratio( 
-	numerator = ~ gross_monthly_rent , 
-	denominator = ~ yearly_household_income , 
+	numerator = ~ rent_amount , 
+	denominator = ~ hhinc_rec1 , 
 	nychvs_design ,
 	na.rm = TRUE
 )
 sub_nychvs_design <- subset( nychvs_design , boro == 3 )
-svymean( ~ yearly_household_income , sub_nychvs_design , na.rm = TRUE )
-this_result <- svymean( ~ yearly_household_income , nychvs_design , na.rm = TRUE )
+svymean( ~ hhinc_rec1 , sub_nychvs_design , na.rm = TRUE )
+this_result <- svymean( ~ hhinc_rec1 , nychvs_design , na.rm = TRUE )
 
 coef( this_result )
 SE( this_result )
@@ -125,7 +167,7 @@ cv( this_result )
 
 grouped_result <-
 	svyby( 
-		~ yearly_household_income , 
+		~ hhinc_rec1 , 
 		~ borough , 
 		nychvs_design , 
 		svymean ,
@@ -137,22 +179,22 @@ SE( grouped_result )
 confint( grouped_result )
 cv( grouped_result )
 degf( nychvs_design )
-svyvar( ~ yearly_household_income , nychvs_design , na.rm = TRUE )
+svyvar( ~ hhinc_rec1 , nychvs_design , na.rm = TRUE )
 # SRS without replacement
-svymean( ~ yearly_household_income , nychvs_design , na.rm = TRUE , deff = TRUE )
+svymean( ~ hhinc_rec1 , nychvs_design , na.rm = TRUE , deff = TRUE )
 
 # SRS with replacement
-svymean( ~ yearly_household_income , nychvs_design , na.rm = TRUE , deff = "replace" )
+svymean( ~ hhinc_rec1 , nychvs_design , na.rm = TRUE , deff = "replace" )
 svyciprop( ~ home_owners , nychvs_design ,
 	method = "likelihood" )
-svyttest( yearly_household_income ~ home_owners , nychvs_design )
+svyttest( hhinc_rec1 ~ home_owners , nychvs_design )
 svychisq( 
-	~ home_owners + householder_sex , 
+	~ home_owners + food_insecurity , 
 	nychvs_design 
 )
 glm_result <- 
 	svyglm( 
-		yearly_household_income ~ home_owners + householder_sex , 
+		hhinc_rec1 ~ home_owners + food_insecurity , 
 		nychvs_design 
 	)
 
@@ -161,8 +203,8 @@ svytotal( ~ one , nychvs_design )
 library(srvyr)
 nychvs_srvyr_design <- as_survey( nychvs_design )
 nychvs_srvyr_design %>%
-	summarize( mean = survey_mean( yearly_household_income , na.rm = TRUE ) )
+	summarize( mean = survey_mean( hhinc_rec1 , na.rm = TRUE ) )
 
 nychvs_srvyr_design %>%
 	group_by( borough ) %>%
-	summarize( mean = survey_mean( yearly_household_income , na.rm = TRUE ) )
+	summarize( mean = survey_mean( hhinc_rec1 , na.rm = TRUE ) )

@@ -14,19 +14,19 @@ nychvs_csv_import <-
 		
 		this_df
 	}
-datasets_url <- "https://www2.census.gov/programs-surveys/nychvs/datasets/2021/microdata/"
+datasets_url <- "https://www.nyc.gov/assets/hpd/data/"
 
 all_units_df <-
-	nychvs_csv_import( paste0( datasets_url , "allunits_puf_21.csv" ) )
+	nychvs_csv_import( paste0( datasets_url , "allunits_puf_23.csv" ) )
 
 occupied_units_df <-
-	nychvs_csv_import( paste0( datasets_url , "occupied_puf_21.csv" ) )
+	nychvs_csv_import( paste0( datasets_url , "occupied_puf_23.csv" ) )
 
 person_df <-
-	nychvs_csv_import( paste0( datasets_url , "person_puf_21.csv" ) )
+	nychvs_csv_import( paste0( datasets_url , "person_puf_23.csv" ) )
 
 vacant_units_df <-
-	nychvs_csv_import( paste0( datasets_url , "vacant_puf_21.csv" ) )
+	nychvs_csv_import( paste0( datasets_url , "vacant_puf_23.csv" ) )
 
 stopifnot( nrow( all_units_df ) == nrow( occupied_units_df ) + nrow( vacant_units_df ) )
 before_nrow <- nrow( occupied_units_df )
@@ -210,9 +210,28 @@ glm_result <-
 	)
 
 summary( glm_result )
-result <- svytotal( ~ one , nychvs_design )
+occupied_units_2021_df <-
+	nychvs_csv_import( paste0( datasets_url , "occupied_puf_21.csv" ) )
+
+occupied_units_2021_df[ , 'one' ] <- 1
+
+nychvs_2021_design <-
+	svrepdesign(
+		weight = ~fw ,
+		repweights = 'fw[0-9]+' ,
+		scale = 4 / 80 ,
+		rscales = rep( 1 , 80 ) ,
+		mse = TRUE ,
+		type = 'JK1' ,
+		data = occupied_units_2021_df
+	)
+
+result <- svytotal( ~ one , nychvs_2021_design )
 stopifnot( round( coef( result ) , 0 ) == 3157105 )
 stopifnot( round( SE( result ) , 0 ) == 13439 )
+result <- svymean( ~ grent , subset( nychvs_2021_design , grent > 0 & rent_amount != -2 ) )
+stopifnot( round( coef( result ) , 3 ) == 1726.739 )
+stopifnot( round( SE( result ) , 4 ) == 15.8292 )
 library(srvyr)
 nychvs_srvyr_design <- as_survey( nychvs_design )
 nychvs_srvyr_design %>%
